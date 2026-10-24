@@ -1,0 +1,20 @@
+{
+  "overview": "A worldwide donation website where visitors can browse real causes and give securely online with globally used payment methods.",
+  "features": [
+    "Browse causes for Nepal earthquake relief and Africa water, food and medicine",
+    "See each cause's funding goal, amount raised and progress",
+    "Donate online with a card or another globally supported payment method",
+    "Share a direct link to any cause",
+    "Public donor list with optional name and message, or give anonymously",
+    "Owner-only tools to create, edit, publish and close causes and view the donation ledger"
+  ],
+  "category": "donation-website",
+  "tags": [
+    "donations",
+    "charity",
+    "nonprofit",
+    "payments",
+    "worldwide"
+  ],
+  "last_updated": "2026-10-24T16:15:52.726Z"
+}

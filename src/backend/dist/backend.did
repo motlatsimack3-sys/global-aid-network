@@ -1,0 +1,213 @@
+type Value = 
+ variant {
+   "bool": bool;
+   float: float64;
+   "int": int;
+   "nat": nat;
+   "null";
+   "text": text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec HttpHeader;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: HttpRequestResult;
+ };
+type Timestamp = int;
+type StripeSessionStatus = 
+ variant {
+   completed: record {
+                response: text;
+                userPrincipal: opt text;
+              };
+   failed: record {error: text;};
+ };
+type StripeConfiguration = 
+ record {
+   allowedCountries: vec text;
+   secretKey: text;
+ };
+type ShoppingItem = 
+ record {
+   currency: text;
+   priceInCents: nat;
+   productDescription: text;
+   productName: text;
+   quantity: nat;
+ };
+type Result__1 = 
+ variant {
+   err: Error;
+   ok;
+ };
+type Result = 
+ record {
+   hasMore: bool;
+   rows: vec vec Cell;
+ };
+type HttpRequestResult = 
+ record {
+   body: blob;
+   headers: vec HttpHeader;
+   status: nat;
+ };
+type HttpHeader = 
+ record {
+   name: text;
+   value: text;
+ };
+type Error = 
+ variant {
+   AmbiguousAttribute: record {
+                         field: text;
+                         sources: vec text;
+                       };
+   FrontendOriginMismatch: record {
+                             expected: vec text;
+                             got: text;
+                           };
+   FrontendOriginsNotConfigured;
+   MalformedCandid;
+   MissingField: text;
+   MixedSsoSources: record {
+                      otherKeys: vec text;
+                      ssoKeys: vec text;
+                    };
+   NoAttributes;
+   Stale: record {ageNs: nat;};
+   UnknownNonce;
+   UntrustedSsoSource: record {domain: text;};
+ };
+type DonationView = 
+ record {
+   amountCents: nat;
+   causeId: CauseId;
+   createdAt: Timestamp;
+   donorDisplayName: text;
+   id: DonationId;
+   message: opt text;
+   receiptRef: text;
+ };
+type DonationStatus = 
+ variant {
+   completed;
+   failed;
+   pending;
+ };
+type DonationStart = 
+ record {
+   donationId: DonationId;
+   sessionJson: text;
+ };
+type DonationInput = 
+ record {
+   amountCents: nat;
+   cancelUrl: text;
+   causeId: CauseId;
+   donorName: opt text;
+   message: opt text;
+   successUrl: text;
+ };
+type DonationId = nat;
+type Donation = 
+ record {
+   amountCents: nat;
+   causeId: CauseId;
+   createdAt: Timestamp;
+   donorName: opt text;
+   id: DonationId;
+   message: opt text;
+   receiptRef: text;
+   status: DonationStatus;
+ };
+type Cell = 
+ record {
+   name: text;
+   value: Value;
+ };
+type CauseView = 
+ record {
+   createdAt: Timestamp;
+   description: text;
+   goalCents: nat;
+   id: CauseId;
+   imageRef: text;
+   progressBps: nat;
+   raisedCents: nat;
+   status: CauseStatus;
+   title: text;
+ };
+type CauseStatus = 
+ variant {
+   closed;
+   draft;
+   published;
+ };
+type CauseInput = 
+ record {
+   description: text;
+   goalCents: nat;
+   imageRef: text;
+   title: text;
+ };
+type CauseId = nat;
+service : {
+  _initialize_access_control: () -> ();
+  _internet_identity_sign_in_finish: () -> (Result__1);
+  _internet_identity_sign_in_start: () -> (blob);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  /// Owner-only: close a cause.
+  closeCause: (id: CauseId) -> (bool);
+  /// Public: confirm a completed online payment so the donation is recorded and
+  /// the cause amount raised increases. When no Stripe secret key has been saved
+  /// there is no gateway to verify against, so the pending donation is recorded
+  /// as completed and the cause total increases.
+  confirmDonation: (donationId: DonationId) -> (DonationView);
+  /// Owner-only: create a draft cause.
+  createCause: (input: CauseInput) -> (CauseId);
+  createCheckoutSession: (items: vec ShoppingItem, successUrl: text,
+   cancelUrl: text) -> (text);
+  /// Owner-only: edit a cause's title, description, image and goal.
+  editCause: (id: CauseId, input: CauseInput) -> (bool);
+  execute: (qJson: text) -> (Result) query;
+  getApiDoc: () -> (text) query;
+  getCallerUserRole: () -> (UserRole) query;
+  /// Public: read one cause by id.
+  getCause: (id: CauseId) -> (opt CauseView) query;
+  getStripeSessionStatus: (sessionId: text) -> (StripeSessionStatus);
+  isCallerAdmin: () -> (bool) query;
+  isStripeConfigured: () -> (bool) query;
+  /// Owner-only: list every cause including drafts and closed ones.
+  listAllCauses: () -> (vec CauseView) query;
+  /// Public: list published causes with goal, raised and progress.
+  listCauses: () -> (vec CauseView) query;
+  /// Owner-only: read the full donation ledger for a cause.
+  listDonationLedger: (causeId: CauseId) -> (vec Donation) query;
+  /// Public: list recent completed donations for a cause.
+  listRecentDonations: (causeId: CauseId, limit: nat) ->
+   (vec DonationView) query;
+  /// Owner-only: publish a cause.
+  publishCause: (id: CauseId) -> (bool);
+  schema: () -> (text) query;
+  /// Owner-only: set a cause's funding goal.
+  setCauseGoal: (id: CauseId, goalCents: nat) -> (bool);
+  setStripeConfiguration: (config: StripeConfiguration) -> ();
+  /// Public: start a donation for a published cause. Records a pending donation
+  /// and returns the checkout session JSON to redirect to. When no Stripe secret
+  /// key has been saved, the donation is still recorded and the returned session
+  /// points at this app's own payment step, so a signed-out visitor can always
+  /// reach payment in a fresh draft.
+  startDonation: (input: DonationInput) -> (DonationStart);
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+}
